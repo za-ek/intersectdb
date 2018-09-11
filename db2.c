@@ -10,6 +10,16 @@
 
 char storage_path[255];
 
+struct db2 {
+    int dic_size;
+    int block_size;
+    char*path;
+    FILE*fp;
+};
+
+struct db2 getDb(char *db_name, char *mode);
+void closeDb(struct db2 db);
+
 /*
  * Storing intersections it will use a file that
  * represent intersect table. Such as in table
@@ -85,14 +95,8 @@ int intersect2_createDb(char*db_name, unsigned int dicSize)
  */
 int intersect2_inc(char*db_name, int from, int to)
 {
-    int DIC_SIZE = 0;
-    int BLOCK_SIZE;
     int position;
-    char* path = (char*)malloc((strlen(storage_path)+1+5+strlen(db_name)) * sizeof(char));
-
-    sprintf(path, "%s%s%s", storage_path, db_name, ".idb2");
-
-    printf("Path is <%s>\n", path);
+    struct db2 db;
 
     if(from > 0 && to > 0) {
         if(from > to) {
@@ -101,35 +105,27 @@ int intersect2_inc(char*db_name, int from, int to)
             from = tmp;
         }
 
-        unsigned int head;
-        FILE * f = fopen(path, "rb+");
-        if(f != NULL) {
+        db = getDb(db_name, "rb+");
 
-            fseek(f, 0, SEEK_SET);
-            fread(&head, 4, 1, f);
-
-            DIC_SIZE = head << 8 >> 8;
-
-            BLOCK_SIZE = head >> 24;
-            BLOCK_SIZE += 1;
-
+        if(db.fp != NULL) {
             if(from > 1) {
-                fseek(f, 4 + (from-2)*BLOCK_SIZE, SEEK_SET);
-                fread(&position, BLOCK_SIZE, 1, f);
+                fseek(db.fp, 4 + (from-2)*db.block_size, SEEK_SET);
+                fread(&position, db.block_size, 1, db.fp);
                 position += to - from - 2;
             } else {
                 position = to - from;
             }
-            printf("Position is %i\n",  4 + (DIC_SIZE-2)*BLOCK_SIZE + position * BLOCK_SIZE);
-            fseek(f, 4 + (DIC_SIZE-2)*BLOCK_SIZE + position * BLOCK_SIZE, SEEK_SET);
+
+            fseek(db.fp, 4 + (db.dic_size-2)*db.block_size + position * db.block_size, SEEK_SET);
 
             int val = 0;
-            fread(&val, BLOCK_SIZE, 1, f);
-            fseek(f, -BLOCK_SIZE, SEEK_CUR);
+            fread(&val, db.block_size, 1, db.fp);
+            fseek(db.fp, -db.block_size, SEEK_CUR);
 
             val++;
-            fwrite(&val, BLOCK_SIZE, 1, f);
-            fclose(f);
+            fwrite(&val, db.block_size, 1, db.fp);
+
+            closeDb(db);
 
             return val;
         } else {
@@ -151,12 +147,7 @@ int intersect2_inc(char*db_name, int from, int to)
  */
 int intersect2_get(char*db_name, int el1, int el2)
 {
-    char* path = (char*)malloc((strlen(storage_path)+1+5+strlen(db_name)) * sizeof(char));
-    sprintf(path, "%s%s%s", storage_path, db_name, ".idb2");
-
-
-    int blockSize, dicSize;
-    unsigned int head;
+    struct db2 db;
 
     if(el1 > 0 && el2 > 0) {
        if(el1 > el2) {
@@ -165,31 +156,25 @@ int intersect2_get(char*db_name, int el1, int el2)
            el1 = tmp;
        }
 
-       FILE * f = fopen(path, "rb");
-       if(f != NULL) {
-           fseek(f, 0, SEEK_SET);
-           fread(&head, 4, 1, f);
+       db = getDb(db_name, "rb");
 
-           dicSize = head << 8 >> 8;
-
-           blockSize = head >> 24;
-           blockSize += 1;
-
+       if(db.fp != NULL) {
            int position;
 
            if(el1 > 1) {
-               fseek(f, 4 + (el1-2)*blockSize, SEEK_SET);
-               fread(&position, blockSize, 1, f);
+               fseek(db.fp, 4 + (el1-2)*db.block_size, SEEK_SET);
+               fread(&position, db.block_size, 1, db.fp);
                position += el2 - el1 - 2;
            } else {
                position = el2 - el1;
            }
 
-           fseek(f, 4 + (dicSize-2)*blockSize + position * blockSize, SEEK_SET);
+           fseek(db.fp, 4 + (db.dic_size-2)*db.block_size + position * db.block_size, SEEK_SET);
 
            int val = 0;
-           fread(&val, blockSize, 1, f);
-           fclose(f);
+           fread(&val, db.block_size, 1, db.fp);
+
+           closeDb(db);
 
            return (int)val;
        } else {
@@ -198,4 +183,45 @@ int intersect2_get(char*db_name, int el1, int el2)
    }
 
    return -2;
+}
+
+/**
+ * @brief getDb
+ * @param db_name
+ * @param mode
+ * @return
+ */
+struct db2 getDb(char*db_name, char*mode)
+{
+    unsigned int head;
+    struct db2 db;
+
+    char* path = (char*)malloc((strlen(storage_path)+1+5+strlen(db_name)) * sizeof(char));
+    sprintf(path, "%s%s%s", storage_path, db_name, ".idb2");
+
+    db.path = path;
+
+    FILE * f = fopen(path, mode);
+    if(f != NULL) {
+        fseek(f, 0, SEEK_SET);
+        fread(&head, 4, 1, f);
+
+        db.dic_size = head << 8 >> 8;
+
+        db.block_size = head >> 24;
+        db.block_size += 1;
+
+        db.fp = f;
+    } else {
+        z_err("Couldn't init db structure\n");
+    }
+
+    return db;
+}
+
+void closeDb(struct db2 db)
+{
+    if(db.fp != NULL) {
+        fclose(db.fp);
+    }
 }
