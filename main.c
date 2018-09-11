@@ -14,21 +14,32 @@
 #include "db2.h"
 
 extern char storage_path[255];
+extern int  port_no;
 
 #define PORT_NO 2450
 #define STORAGE_PATH "/var/lib/intersectdb/storage/"
 
+void parseConfig();
 void startSocket();
 void doprocessing(int sock);
 int checkStoragePath(char *path);
 
 int main()
 {
-    strcpy(storage_path, STORAGE_PATH);
-    if(checkStoragePath(STORAGE_PATH) == 1) {
+    parseConfig();
+
+    if(checkStoragePath(storage_path) == 1) {
         startSocket(PORT_NO);
     }
     return 0;
+}
+
+/**
+ * @brief parseConfig
+ */
+void parseConfig()
+{
+    strcpy(storage_path, STORAGE_PATH);
 }
 
 void startSocket(int port)

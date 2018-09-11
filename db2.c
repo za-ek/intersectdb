@@ -142,13 +142,20 @@ int intersect2_inc(char*db_name, int from, int to)
     }
 }
 
+/**
+ * @brief intersect2_get
+ * @param db_name
+ * @param el1
+ * @param el2
+ * @return
+ */
 int intersect2_get(char*db_name, int el1, int el2)
 {
     char* path = (char*)malloc((strlen(storage_path)+1+5+strlen(db_name)) * sizeof(char));
     sprintf(path, "%s%s%s", storage_path, db_name, ".idb2");
 
 
-    int BLOCK_SIZE, DIC_SIZE;
+    int blockSize, dicSize;
     unsigned int head;
 
     if(el1 > 0 && el2 > 0) {
@@ -163,25 +170,25 @@ int intersect2_get(char*db_name, int el1, int el2)
            fseek(f, 0, SEEK_SET);
            fread(&head, 4, 1, f);
 
-           DIC_SIZE = head << 8 >> 8;
+           dicSize = head << 8 >> 8;
 
-           BLOCK_SIZE = head >> 24;
-           BLOCK_SIZE += 1;
+           blockSize = head >> 24;
+           blockSize += 1;
 
            int position;
 
            if(el1 > 1) {
-               fseek(f, 4 + (el1-2)*BLOCK_SIZE, SEEK_SET);
-               fread(&position, BLOCK_SIZE, 1, f);
+               fseek(f, 4 + (el1-2)*blockSize, SEEK_SET);
+               fread(&position, blockSize, 1, f);
                position += el2 - el1 - 2;
            } else {
                position = el2 - el1;
            }
 
-           fseek(f, 4 + (DIC_SIZE-2)*BLOCK_SIZE + position * BLOCK_SIZE, SEEK_SET);
+           fseek(f, 4 + (dicSize-2)*blockSize + position * blockSize, SEEK_SET);
 
            int val = 0;
-           fread(&val, BLOCK_SIZE, 1, f);
+           fread(&val, blockSize, 1, f);
            fclose(f);
 
            return (int)val;
