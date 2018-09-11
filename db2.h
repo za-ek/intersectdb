@@ -10,7 +10,7 @@ extern char storage_path[255];
  * @param dicSize   Element count of the dictionary
  * @return
  */
-int intersect2_createDb(char*db_name, int16_t dicSize);
+int intersect2_createDb(char*db_name, int dicSize);
 /**
  * @brief intersect2_inc    Increment intersection of two IDs
  * @param e1
