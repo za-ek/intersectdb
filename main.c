@@ -130,7 +130,7 @@ void doprocessing (int sock)
             char*db_name;
             db_name = strsep(&string, " ");
 
-            int db_size;
+            unsigned int db_size;
             db_size = atoi(strsep(&string, " "));
 
             write(sock, "Will create a database: <", 25);

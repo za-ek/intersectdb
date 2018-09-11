@@ -21,8 +21,12 @@ char storage_path[255];
  *
  */
 
-int intersect2_createDb(char*db_name, int dicSize)
+int intersect2_createDb(char*db_name, unsigned int dicSize)
 {
+    if(dicSize > 65535) {
+        z_err("Couldn't add more than 65535 elements");
+        return -1;
+    }
     char* path = (char*)malloc((strlen(storage_path)+1+5+strlen(db_name)) * sizeof(char));
     sprintf(path, "%s%s%s", storage_path, db_name, ".idb2");
 
@@ -32,15 +36,16 @@ int intersect2_createDb(char*db_name, int dicSize)
     head = 1 << 24;
     head += dicSize;
 
-    int8_t headSize = sizeof(head);
-    int8_t BLOCK_SIZE = 2;
+    unsigned int headSize = sizeof(head);
+    unsigned int BLOCK_SIZE = 2;
 
-    int64_t total_byte_count = headSize + ((dicSize - 2) + elementCount)*BLOCK_SIZE;
+    int64_t total_byte_count = (int64_t) (headSize + ((dicSize - 2) + elementCount)*BLOCK_SIZE);
 
     // Truncate() doesn't fill with zeros an existing file of a smaller size
     if(access( path, F_OK ) != -1) {
         remove(path);
     }
+
     FILE *fp = fopen(path, "ab+");
     fclose(fp);
 
@@ -52,19 +57,25 @@ int intersect2_createDb(char*db_name, int dicSize)
     }
 
     FILE*f = fopen(path, "rb+");
-    fseek(f, 0, SEEK_SET);
-    fwrite(&head, headSize, 1, f);
+    if(f != NULL) {
+        fseek(f, 0, SEEK_SET);
+        fwrite(&head, headSize, 1, f);
 
-    int buffer;
-    buffer = 1;
+        int buffer;
+        buffer = 1;
 
-    int i;
-    for(i = 1; i < dicSize; i++) {
-        buffer += dicSize - i;
-        fwrite(&buffer, BLOCK_SIZE, 1, f);
+        unsigned int i;
+        for(i = 1; i < dicSize; i++) {
+            buffer += dicSize - i;
+            fwrite(&buffer, BLOCK_SIZE, 1, f);
+        }
+
+        fclose(f);
+    } else {
+        printf("Oh dear, something went wrong with read()! %s\n", strerror(errno));
+        z_err("Couldn't open database file\n");
+        return -1;
     }
-
-    fclose(f);
 
     return 0;
 }
