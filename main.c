@@ -13,6 +13,8 @@
 #include "common.h"
 #include "db2.h"
 
+extern char storage_path[255];
+
 #define PORT_NO 2450
 #define STORAGE_PATH "/var/lib/intersectdb/storage/"
 
@@ -22,7 +24,7 @@ int checkStoragePath(char *path);
 
 int main()
 {
-    printf("Hi!\n");
+    strcpy(storage_path, STORAGE_PATH);
     if(checkStoragePath(STORAGE_PATH) == 1) {
         startSocket(PORT_NO);
     }
@@ -142,7 +144,31 @@ void doprocessing (int sock)
             write(sock, ">\n", 2);
 
             printf("Create database <%s> with <%i> elements\n", db_name, db_size);
-            intersect2_createDb(STORAGE_PATH, db_name, db_size);
+            intersect2_createDb(db_name, db_size);
+        } else if (strcmp("INC", cmd) == 0) {
+            char*db_name;
+            int el1, el2;
+
+            db_name = strsep(&string, " ");
+            el1 = atoi(strsep(&string, " "));
+            el2 = atoi(strsep(&string, " "));
+
+            intersect2_inc(db_name, el1, el2);
+        } else if (strcmp("FETCH", cmd) == 0) {
+            char*db_name;
+            int el1, el2;
+            int result;
+
+            db_name = strsep(&string, " ");
+            el1 = atoi(strsep(&string, " "));
+            el2 = atoi(strsep(&string, " "));
+
+            result = intersect2_get(db_name, el1, el2);
+
+            char tmp[12]={0x0};
+            sprintf(tmp,"%i", result);
+            write(sock, tmp, strlen(tmp));
+            write(sock, "\n", 1);
         }
     }
 
