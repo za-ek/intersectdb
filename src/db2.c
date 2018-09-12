@@ -28,9 +28,8 @@ int intersect2_createDb(char*db_name, unsigned int dicSize)
         z_err("Couldn't add more than 65535 elements");
         return -1;
     }
-    char* path = (char*)malloc((strlen(storage_path)+1+5+strlen(db_name)) * sizeof(char));
-    sprintf(path, "%s%s%s", storage_path, db_name, ".idb2");
 
+    char* path = getDbPath(db_name);
     unsigned int elementCount = (dicSize - 1) * dicSize / 2;
 
     unsigned int head;
@@ -163,6 +162,13 @@ void dumpDb(struct db2 db)
     printf("****\n");
 }
 
+char * getDbPath(db_name)
+{
+    char* path = (char*)malloc((strlen(storage_path)+1+5+strlen(db_name)) * sizeof(char));
+    sprintf(path, "%s%s%s", storage_path, db_name, ".idb2");
+    return path;
+}
+
 /**
  * @brief getDb
  * @param db_name
@@ -174,8 +180,7 @@ struct db2 getDb(char*db_name, char*mode)
     unsigned int head;
     struct db2 db;
 
-    char* path = (char*)malloc((strlen(storage_path)+1+5+strlen(db_name)) * sizeof(char));
-    sprintf(path, "%s%s%s", storage_path, db_name, ".idb2");
+    char* path = getDbPath(db_name);
 
     db.path = path;
 
