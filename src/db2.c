@@ -284,14 +284,11 @@ unsigned int * intersect2_fetch(char*db_name, unsigned int el)
 
         if(el != db.dic_size) {
             position = intersect2_offset(db, el, 0);
-            printf("Got %i as start offset\n", position);
             fseek(db.fp, position, SEEK_SET);
 
             for(i = el; i < db.dic_size; i++) {
-                printf("Move to %i for %i\n", ftell(db.fp), i);
                 fread(&buff, db.block_size, 1, db.fp);
                 result[i+1] = buff;
-                printf("Got %i\n", result[i+1]);
             }
         } else {
             position = intersect2_offset(db, el - 1, 0) + db.block_size;
@@ -300,18 +297,13 @@ unsigned int * intersect2_fetch(char*db_name, unsigned int el)
         if(el > 1) {
             // Move one row up and one cell left
             position = position - (db.dic_size - el + 1) * db.block_size;
-            printf("Position is %i\n", position);
             fseek(db.fp, position, SEEK_SET);
             int delta = (db.dic_size - el) * db.block_size;
             for(i = el-2; i >= 0; i--) {
-                printf("Move back to %i\n", ftell(db.fp));
                 fread(&result[i+1], db.block_size, 1, db.fp);
                 delta += db.block_size;
                 position -= delta;
-                printf("Position %i\n", position);
                 fseek(db.fp, position, SEEK_SET);
-
-                printf("Got %i for %i\n", result[i+1], i);
             }
         }
     }
