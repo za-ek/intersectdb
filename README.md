@@ -10,7 +10,7 @@ On the project root directory
 
 # Run
 On the project root directory
-- `./intersectdb [PORT_NO = 2450]
+- `./intersectdb [PORT_NO = 2450]`
 
 # Available commands
 
