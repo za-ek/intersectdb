@@ -1,3 +1,4 @@
+#include <stdio.h>
 #ifndef DB2_STRUCT_HEADER
 #define DB2_STRUCT_HEADER
 struct db2 {

@@ -13,9 +13,11 @@
 
 #include "utils.h"
 #include "db2.h"
+#include "cmd.h"
 
 char storage_path[255];
 int  port_number;
+int  sock_fd;
 
 #define PORT_NO 2450
 #define STORAGE_PATH "/var/lib/intersectdb/storage/"
@@ -119,91 +121,36 @@ void doprocessing (int sock)
 {
     int n;
     char buffer[256];
-    char *cmd, *string, *token;
+    char *string;
 
-    bzero(buffer,256);
-    n = read(sock,buffer,255);
+    sock_fd = sock;
 
-    if (n < 0) {
-        perror("ERROR reading from socket");
-        exit(1);
-    }
+    do {
+        bzero(buffer,256);
+        n = read(sock,buffer,255);
 
-    printf("Received the message: %s\n",buffer);
-
-
-    string = strdup(buffer);
-    string = z_trim(string);
-
-    if((token = strsep(&string, " ")) != NULL) {
-        printf("Found <%s>\n", token);
-
-        cmd = token;
-
-        write(sock, "Command found:", 14);
-        write(sock, cmd, strlen(cmd));
-        write(sock, "\n", 1);
-
-        if(strcmp("CREATE2", cmd) == 0) {
-            char*db_name;
-            db_name = strsep(&string, " ");
-
-            unsigned int db_size;
-            db_size = atoi(strsep(&string, " "));
-
-            write(sock, "Will create a database: <", 25);
-            write(sock, db_name, strlen(db_name));
-            write(sock, ":", 1);
-
-            char tmp[12]={0x0};
-            sprintf(tmp,"%i", db_size);
-            write(sock, tmp, strlen(tmp));
-
-            write(sock, ">\n", 2);
-
-            printf("Create database <%s> with <%i> elements\n", db_name, db_size);
-
-            int result;
-            result = intersect2_createDb(db_name, db_size);
-            if(result < 0) {
-                write(sock, "There was an error\n", 19);
-            }
-        } else if (strcmp("INC", cmd) == 0) {
-            char*db_name;
-            unsigned int el1, el2, n = 1;
-
-            db_name = strsep(&string, " ");
-            el1 = atoi(strsep(&string, " "));
-            el2 = atoi(strsep(&string, " "));
-            if(strlen(&string) > 0) {
-                n = atoi(strsep(&string, " "));
-            }
-
-            intersect2_inc(db_name, el1, el2, n);
-        } else if (strcmp("GET", cmd) == 0) {
-            char*db_name;
-            int el1, el2;
-            int result;
-
-            db_name = strsep(&string, " ");
-            el1 = atoi(strsep(&string, " "));
-            el2 = atoi(strsep(&string, " "));
-
-            result = intersect2_get(db_name, el1, el2);
-
-            char tmp[12]={0x0};
-            sprintf(tmp,"%i", result);
-            write(sock, tmp, strlen(tmp));
-            write(sock, "\n", 1);
+        if (n < 0) {
+            perror("ERROR reading from socket");
+            exit(1);
         }
-    }
 
-    n = write(sock,"I got your message\n",19);
+        printf("Received the message: %s\n",buffer);
 
-    if (n < 0) {
-        perror("ERROR writing to socket");
-        exit(1);
-    }
+        string = strdup(buffer);
+        string = z_trim(string);
+
+        if(processCommand(string) == CMD_RESULT_EXIT) {
+            write(sock,"BYE\n",4);
+            exit(0);
+        }
+
+        n = write(sock,"END\n",4);
+
+        if (n < 0) {
+            perror("ERROR writing to socket");
+            exit(1);
+        }
+    } while(1);
 }
 
 /**

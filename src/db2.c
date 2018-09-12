@@ -115,7 +115,7 @@ int intersect2_inc(char*db_name, int el1, int el2, int n)
 
             closeDb(db);
 
-            return 1;
+            return val;
         } else {
             printf("Oh dear, something went wrong with read()! %s\n", strerror(errno));
             z_err("Couldn't open database file\n");
