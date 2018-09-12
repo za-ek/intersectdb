@@ -1,16 +1,29 @@
 # intersectdb
 Database for storing intersections
 
-Start socket on 2450
+# Preface
+This database is allow you to store a count of intersections within a set of items.
 
-Create a database file
-`CREATE2 db_name db_size`
-`CREATE2 cities 1230`
+# Install
+On the project root directory
+- `make clean && make`
 
-Increment value
-`INC db_name N M`
-`INC cities 2 43`
+# Run
+On the project root directory
+- `./intersectdb [PORT_NO = 2450]
 
-Fetch value
-`FETCH db_name N M`
-`FETCH cities 32 2`
+# Available commands
+
+You can send commands connecting by `netcat` for example `netcat 127.0.0.1 2450`. Any response returns with a string "END".
+
+- Create a database
+`CREATE DB2 %db_name% %elements_count%`
+
+- Increment value of intersection between X and Y
+`INC %db_name% X Y [%inc_value% = 1]`
+
+- Get value of intersection between X and Y
+`READ %db_name% X Y`
+
+- Get value of all intersections with X
+`FETCH %db_name% X`

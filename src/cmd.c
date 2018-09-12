@@ -110,6 +110,8 @@ int processCommand(char*string)
 
             sprintf(tmp,"%i", result);
             sendResult(tmp);
+        } else {
+            sendResult("UNKNOWN");
         }
     }
 
