@@ -39,6 +39,7 @@ char *z_trim(char *str)
 void z_err (char*err)
 {
     printf(err);
+    printf("\n");
 }
 
 /**

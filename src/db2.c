@@ -7,18 +7,9 @@
 #include <unistd.h>
 
 #include "utils.h"
+#include "db2.h"
 
 char storage_path[255];
-
-struct db2 {
-    int dic_size;
-    int block_size;
-    char*path;
-    FILE*fp;
-};
-
-struct db2 getDb(char *db_name, char *mode);
-void closeDb(struct db2 db);
 
 /*
  * Storing intersections it will use a file that
@@ -47,23 +38,25 @@ int intersect2_createDb(char*db_name, unsigned int dicSize)
     head += dicSize;
 
     unsigned int headSize = sizeof(head);
-    unsigned int BLOCK_SIZE = 2;
+    unsigned int blockSize = 2;
 
-    int64_t total_byte_count = (int64_t) (headSize + ((dicSize - 2) + elementCount)*BLOCK_SIZE);
+    long unsigned int total_byte_count = (int64_t) (headSize + ((dicSize - 2) + elementCount)*blockSize);
 
     // Truncate() doesn't fill with zeros an existing file of a smaller size
     if(access( path, F_OK ) != -1) {
         remove(path);
     }
 
-    FILE *fp = fopen(path, "ab+");
+    FILE *fp = fopen(path, "w");
+    if(fp == NULL) {
+        return -1;
+    }
     fclose(fp);
 
     truncate(path, total_byte_count);
     if(errno) {
-        char *err = "";
-        sprintf(err, "There was an error creating DB \"%s\"\n", strerror(errno));
-        z_err(err);
+        printf("%s\n", strerror(errno));
+        return -1;
     }
 
     FILE*f = fopen(path, "rb+");
@@ -71,17 +64,19 @@ int intersect2_createDb(char*db_name, unsigned int dicSize)
         fseek(f, 0, SEEK_SET);
         fwrite(&head, headSize, 1, f);
 
-        int buffer;
-        buffer = 1;
+        unsigned int buffer;
+        // First offset starts on that byte
+        buffer = 4 + (dicSize - 2) * blockSize;
 
         unsigned int i;
-        for(i = 1; i < dicSize; i++) {
-            buffer += dicSize - i;
-            fwrite(&buffer, BLOCK_SIZE, 1, f);
+        for(i = 1; i < dicSize - 1; i++) {
+            buffer += (dicSize - i) * blockSize;
+            fwrite(&buffer, blockSize, 1, f);
         }
 
         fclose(f);
     } else {
+        printf("Open error\n");
         printf("Oh dear, something went wrong with read()! %s\n", strerror(errno));
         z_err("Couldn't open database file\n");
         return -1;
@@ -93,32 +88,21 @@ int intersect2_createDb(char*db_name, unsigned int dicSize)
 /**
  * Increment intersection value
  */
-int intersect2_inc(char*db_name, int from, int to)
+int intersect2_inc(char*db_name, int el1, int el2)
 {
     int position;
+    int val = 0;
+
     struct db2 db;
 
-    if(from > 0 && to > 0) {
-        if(from > to) {
-            int16_t tmp = to;
-            to = from;
-            from = tmp;
-        }
+    if(el1 > 0 && el2 > 0) {
 
         db = getDb(db_name, "rb+");
 
         if(db.fp != NULL) {
-            if(from > 1) {
-                fseek(db.fp, 4 + (from-2)*db.block_size, SEEK_SET);
-                fread(&position, db.block_size, 1, db.fp);
-                position += to - from - 2;
-            } else {
-                position = to - from;
-            }
+            position = intersect2_offset(db, el1, el2);
+            fseek(db.fp, position, SEEK_SET);
 
-            fseek(db.fp, 4 + (db.dic_size-2)*db.block_size + position * db.block_size, SEEK_SET);
-
-            int val = 0;
             fread(&val, db.block_size, 1, db.fp);
             fseek(db.fp, -db.block_size, SEEK_CUR);
 
@@ -150,28 +134,13 @@ int intersect2_get(char*db_name, int el1, int el2)
     struct db2 db;
 
     if(el1 > 0 && el2 > 0) {
-       if(el1 > el2) {
-           int16_t tmp = el2;
-           el2 = el1;
-           el1 = tmp;
-       }
-
        db = getDb(db_name, "rb");
 
        if(db.fp != NULL) {
-           int position;
-
-           if(el1 > 1) {
-               fseek(db.fp, 4 + (el1-2)*db.block_size, SEEK_SET);
-               fread(&position, db.block_size, 1, db.fp);
-               position += el2 - el1 - 2;
-           } else {
-               position = el2 - el1;
-           }
-
-           fseek(db.fp, 4 + (db.dic_size-2)*db.block_size + position * db.block_size, SEEK_SET);
-
            int val = 0;
+           int position = intersect2_offset(db, el1, el2);
+
+           fseek(db.fp, position, SEEK_SET);
            fread(&val, db.block_size, 1, db.fp);
 
            closeDb(db);
@@ -183,6 +152,15 @@ int intersect2_get(char*db_name, int el1, int el2)
    }
 
    return -2;
+}
+
+void dumpDb(struct db2 db)
+{
+    printf("****\n");
+    printf("* Database path <%s>\n", db.path);
+    printf("* Database has <%u> elements\n", db.dic_size);
+    printf("* Database block defined as <%u> bytes\n", db.block_size);
+    printf("****\n");
 }
 
 /**
@@ -224,4 +202,45 @@ void closeDb(struct db2 db)
     if(db.fp != NULL) {
         fclose(db.fp);
     }
+}
+/**
+ * @brief Return an absolute offset of intersection or starting row
+ *        in case that one of elements is equal to zero
+ * @param db
+ * @param el1
+ * @param el2
+ * @return
+ */
+unsigned int intersect2_offset(struct db2 db, int el1, int el2)
+{
+    if(db.fp == NULL) {
+        return -1;
+    }
+
+    if(el1 == el2) {
+        el1 = 0;
+    } else if(el1 > el2) {
+        int tmp = el2;
+        el2 = el1;
+        el1 = tmp;
+    }
+
+    if(el2 < 1) {
+        return -1;
+    }
+
+    int position = 0;
+
+    if(el1 > 1) {
+        fseek(db.fp, 4 + (el1-2)*db.block_size, SEEK_SET);
+        fread(&position, db.block_size, 1, db.fp);
+    } else {
+        position = 4 + (db.dic_size-2)*db.block_size;
+    }
+
+    if(el1 != 0) {
+        position += (el2 - el1 - 1) * db.block_size;
+    }
+
+    return (unsigned int) position;
 }

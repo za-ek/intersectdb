@@ -9,27 +9,28 @@
 #include <netdb.h>
 #include <netinet/in.h>
 #include <stdio.h>
+#include <glob.h>
 
 #include "utils.h"
 #include "db2.h"
 
-extern char storage_path[255];
-extern int  port_no;
+char storage_path[255];
+int  port_number;
 
 #define PORT_NO 2450
 #define STORAGE_PATH "/var/lib/intersectdb/storage/"
 
-void parseConfig();
-void startSocket();
+void parseConfig(int argc, char**argv);
+void startSocket(int port);
 void doprocessing(int sock);
 int checkStoragePath(char *path);
 
-int main()
+int main(int argc, char**argv)
 {
-    parseConfig();
+    parseConfig(argc, argv);
 
     if(checkStoragePath(storage_path) == 1) {
-        startSocket(port_no);
+        startSocket(port_number);
     }
     return 0;
 }
@@ -37,10 +38,15 @@ int main()
 /**
  * @brief parseConfig
  */
-void parseConfig()
+void parseConfig(int argc, char**argv)
 {
+    if(argc > 1) {
+        port_number = atoi(argv[1]);
+    } else {
+        port_number = PORT_NO;
+    }
+
     strcpy(storage_path, STORAGE_PATH);
-    port_no = PORT_NO;
 }
 
 void startSocket(int port)
@@ -156,7 +162,12 @@ void doprocessing (int sock)
             write(sock, ">\n", 2);
 
             printf("Create database <%s> with <%i> elements\n", db_name, db_size);
-            intersect2_createDb(db_name, db_size);
+
+            int result;
+            result = intersect2_createDb(db_name, db_size);
+            if(result < 0) {
+                write(sock, "There was an error\n", 19);
+            }
         } else if (strcmp("INC", cmd) == 0) {
             char*db_name;
             int el1, el2;
