@@ -6,7 +6,7 @@
 #include <errno.h>
 #include <unistd.h>
 
-#include <common.h>
+#include "utils.h"
 
 char storage_path[255];
 

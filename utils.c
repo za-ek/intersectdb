@@ -6,6 +6,8 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#include "utils.h"
+
 /**
  * https://stackoverflow.com/questions/122616/how-do-i-trim-leading-trailing-whitespace-in-a-standard-way
  *
