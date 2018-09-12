@@ -73,6 +73,7 @@ int intersect2_createDb(char*db_name, unsigned int dicSize)
 
         unsigned int i;
         for(i = 1; i < dicSize - 1; i++) {
+            printf("Value is %i\n", buffer);
             buffer += (dicSize - i) * blockSize;
             fwrite(&buffer, blockSize, 1, f);
         }
@@ -102,7 +103,7 @@ int intersect2_inc(char*db_name, int el1, int el2, int n)
 
         db = getDb(db_name, "rb+");
 
-        if(db.fp != NULL) {
+        if(db.opened) {
             position = intersect2_offset(db, el1, el2);
             fseek(db.fp, position, SEEK_SET);
 
@@ -185,12 +186,15 @@ struct db2 getDb(char*db_name, char*mode)
     unsigned int head;
     struct db2 db;
 
+    db.name = db_name;
+
     char* path = getDbPath(db_name);
 
     db.path = path;
 
     FILE * f = fopen(path, mode);
     if(f != NULL) {
+        db.opened = 1;
         fseek(f, 0, SEEK_SET);
         fread(&head, 4, 1, f);
 
@@ -201,6 +205,7 @@ struct db2 getDb(char*db_name, char*mode)
 
         db.fp = f;
     } else {
+        db.opened = 0;
         z_err("Couldn't init db structure\n");
     }
 
@@ -223,7 +228,7 @@ void closeDb(struct db2 db)
  */
 unsigned int intersect2_offset(struct db2 db, int el1, int el2)
 {
-    if(db.fp == NULL) {
+    if(!db.opened) {
         return -1;
     }
 
@@ -244,6 +249,9 @@ unsigned int intersect2_offset(struct db2 db, int el1, int el2)
     if(el1 > 1) {
         fseek(db.fp, 4 + (el1-2)*db.block_size, SEEK_SET);
         fread(&position, db.block_size, 1, db.fp);
+    } else if(el1 == 0 && el2 > 1) {
+        fseek(db.fp, 4 + (el2-2)*db.block_size, SEEK_SET);
+        fread(&position, db.block_size, 1, db.fp);
     } else {
         position = 4 + (db.dic_size-2)*db.block_size;
     }
@@ -254,3 +262,64 @@ unsigned int intersect2_offset(struct db2 db, int el1, int el2)
 
     return (unsigned int) position;
 }
+
+/**
+ * @brief Fetch all intersections with <el>
+ * @param db_name
+ * @param el
+ * @return
+ */
+unsigned int * intersect2_fetch(char*db_name, unsigned int el)
+{
+    unsigned int *result, position;
+    int16_t buff;
+
+    int i;
+    struct db2 db;
+    db = getDb(db_name, DB_OPEN_READ);
+    if(db.opened && el > 0) {
+        result =(unsigned int*)malloc((db.dic_size+1) * db.block_size);
+        result[0] = db.dic_size;
+        result[el] = el;
+
+        if(el != db.dic_size) {
+            position = intersect2_offset(db, el, 0);
+            printf("Got %i as start offset\n", position);
+            fseek(db.fp, position, SEEK_SET);
+
+            for(i = el; i < db.dic_size; i++) {
+                printf("Move to %i for %i\n", ftell(db.fp), i);
+                fread(&buff, db.block_size, 1, db.fp);
+                result[i+1] = buff;
+                printf("Got %i\n", result[i+1]);
+            }
+        } else {
+            position = intersect2_offset(db, el - 1, 0) + db.block_size;
+        }
+
+        if(el > 1) {
+            // Move one row up and one cell left
+            position = position - (db.dic_size - el + 1) * db.block_size;
+            printf("Position is %i\n", position);
+            fseek(db.fp, position, SEEK_SET);
+            int delta = (db.dic_size - el) * db.block_size;
+            for(i = el-2; i >= 0; i--) {
+                printf("Move back to %i\n", ftell(db.fp));
+                fread(&result[i+1], db.block_size, 1, db.fp);
+                delta += db.block_size;
+                position -= delta;
+                printf("Position %i\n", position);
+                fseek(db.fp, position, SEEK_SET);
+
+                printf("Got %i for %i\n", result[i+1], i);
+            }
+        }
+    }
+
+    return result;
+}
+
+
+
+
+

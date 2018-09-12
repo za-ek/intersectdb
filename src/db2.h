@@ -1,12 +1,18 @@
 #include <stdio.h>
 #ifndef DB2_STRUCT_HEADER
-#define DB2_STRUCT_HEADER
+#define DB2_STRUCT_HEADER 1
 struct db2 {
     unsigned int dic_size;
     unsigned int block_size;
     char*path;
+    char*name;
+    int8_t opened;
     FILE*fp;
 };
+
+#define DB_OPEN_INFO "rb"
+#define DB_OPEN_READ "rb"
+
 #endif
 
 /**
@@ -35,6 +41,8 @@ int intersect2_inc(char*db_name, int e1, int e2, int n);
  * @return
  */
 int intersect2_get(char*db_name, int e1, int e2);
+
+unsigned int * intersect2_fetch(char*db_name, unsigned int el);
 
 struct db2 getDb(char*db_name, char*mode);
 
