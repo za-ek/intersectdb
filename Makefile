@@ -1,17 +1,21 @@
 CC = gcc
-CFLAGS = -g
-objects = main.o utils.o db2.o
+CFLAGS = -Wall
+OBJFILES = main.o utils.o db2.o
+TARGET = intersectdb
 
-edit : $(objects)
-	cc -o edit $(objects)
+all: $(TARGET)
 
-main.o : utils.h db2.h
-utils.o : utils.h
-db2.o : db2.h
+$(TARGET): $(OBJFILES)
+	$(CC) $(CFLAGS) -o $(TARGET) $(OBJFILES)
 
-.PHONY: clean
-clean :
-	rm edit $(objects)
+main.o: src/db2.h src/utils.h
+	$(CC) $(CFLAGS) -c src/main.c
 
-build: main.c db2.c utils.c
-	$(CC) $(CFLAGS) -o main *.o
+utils.o: src/utils.h
+	$(CC) $(CFLAGS) -c src/utils.c
+
+db2.o: src/db2.h src/utils.h
+	$(CC) $(CFLAGS) -c src/db2.c
+
+clean:
+	rm -f $(OBJFILES) $(TARGET) *~
