@@ -29,7 +29,7 @@ int main()
     parseConfig();
 
     if(checkStoragePath(storage_path) == 1) {
-        startSocket(PORT_NO);
+        startSocket(port_no);
     }
     return 0;
 }
@@ -40,6 +40,7 @@ int main()
 void parseConfig()
 {
     strcpy(storage_path, STORAGE_PATH);
+    port_no = PORT_NO;
 }
 
 void startSocket(int port)
