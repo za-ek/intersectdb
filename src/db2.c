@@ -51,10 +51,14 @@ int intersect2_createDb(char*db_name, unsigned int dicSize)
         return -1;
     }
     fclose(fp);
+    if(errno) {
+        errno = 0;
+    }
 
     truncate(path, total_byte_count);
     if(errno) {
         printf("%s\n", strerror(errno));
+        remove(path);
         return -1;
     }
 
@@ -87,10 +91,10 @@ int intersect2_createDb(char*db_name, unsigned int dicSize)
 /**
  * Increment intersection value
  */
-int intersect2_inc(char*db_name, int el1, int el2)
+int intersect2_inc(char*db_name, int el1, int el2, int n)
 {
-    int position;
-    int val = 0;
+    unsigned int position;
+    unsigned int val = 0;
 
     struct db2 db;
 
@@ -103,14 +107,15 @@ int intersect2_inc(char*db_name, int el1, int el2)
             fseek(db.fp, position, SEEK_SET);
 
             fread(&val, db.block_size, 1, db.fp);
-            fseek(db.fp, -db.block_size, SEEK_CUR);
 
-            val++;
-            fwrite(&val, db.block_size, 1, db.fp);
+            val = val + n;
+
+            fseek(db.fp, position, SEEK_SET);
+            fwrite(&val, 2, 1, db.fp);
 
             closeDb(db);
 
-            return val;
+            return 1;
         } else {
             printf("Oh dear, something went wrong with read()! %s\n", strerror(errno));
             z_err("Couldn't open database file\n");
@@ -162,7 +167,7 @@ void dumpDb(struct db2 db)
     printf("****\n");
 }
 
-char * getDbPath(db_name)
+char * getDbPath(char*db_name)
 {
     char* path = (char*)malloc((strlen(storage_path)+1+5+strlen(db_name)) * sizeof(char));
     sprintf(path, "%s%s%s", storage_path, db_name, ".idb2");

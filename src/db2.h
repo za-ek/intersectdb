@@ -26,7 +26,7 @@ int intersect2_createDb(char*db_name, unsigned int dicSize);
  * @param e1
  * @param e2
  */
-int intersect2_inc(char*db_name, int e1, int e2);
+int intersect2_inc(char*db_name, int e1, int e2, int n);
 /**
  * @brief intersect2_get    Return value of intersection of two elements
  * @param e1
@@ -40,3 +40,5 @@ struct db2 getDb(char*db_name, char*mode);
 unsigned int intersect2_offset(struct db2 db, int el1, int el2);
 
 void closeDb(struct db2 db);
+
+char*getDbPath(char*db_name);

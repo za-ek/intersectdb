@@ -170,13 +170,17 @@ void doprocessing (int sock)
             }
         } else if (strcmp("INC", cmd) == 0) {
             char*db_name;
-            int el1, el2;
+            int el1, el2, n;
 
             db_name = strsep(&string, " ");
             el1 = atoi(strsep(&string, " "));
             el2 = atoi(strsep(&string, " "));
+            n = atoi(strsep(&string, " "));
+            if(n == 0) {
+                n = 1;
+            }
 
-            intersect2_inc(db_name, el1, el2);
+            intersect2_inc(db_name, el1, el2, n);
         } else if (strcmp("FETCH", cmd) == 0) {
             char*db_name;
             int el1, el2;
