@@ -163,7 +163,7 @@ int checkStoragePath(char*path)
     if (result == 1) {
         return 1;
     } else if (result == 2) {
-        char*err = "";
+        char err[255];
         // So poor program :(
         sprintf(err, "Please create a directory <%s>", path);
         z_err(err);

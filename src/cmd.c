@@ -70,7 +70,7 @@ int processCommand(char*string)
             el1 = atoi(strsep(&string, " "));
             el2 = atoi(strsep(&string, " "));
 
-            if(strlen(&string) > 1) {
+            if(strlen(string) > 1) {
                 n = atoi(strsep(&string, " "));
             }
 
