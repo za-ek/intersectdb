@@ -1,24 +1,19 @@
+TARGET_DIR=build
 CC = gcc
 CFLAGS = -Wall
-OBJFILES = main.o utils.o db2.o cmd.o
-TARGET = intersectdb
+TARGET = $(TARGET_DIR)/intersectdb
+
+OBJFILES = $(TARGET_DIR)/main.o $(TARGET_DIR)/utils.o $(TARGET_DIR)/db2.o $(TARGET_DIR)/cmd.o
 
 all: $(TARGET)
 
 $(TARGET): $(OBJFILES)
 	$(CC) $(CFLAGS) -o $(TARGET) $(OBJFILES)
 
-main.o: src/db2.h src/utils.h src/cmd.h
-	$(CC) $(CFLAGS) -c src/main.c
-
-utils.o: src/utils.h
-	$(CC) $(CFLAGS) -c src/utils.c
-
-db2.o: src/db2.h src/utils.h
-	$(CC) $(CFLAGS) -c src/db2.c
-
-cmd.o: src/cmd.h 
-	$(CC) $(CFLAGS) -c src/cmd.c
+$(TARGET_DIR)/%.o: src/%.c
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 clean:
 	rm -f $(OBJFILES) $(TARGET) *~
+
+rebuild: clean all
